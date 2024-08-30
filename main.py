@@ -96,7 +96,7 @@ class MusicPlayer(QWidget):
         self.layout.addWidget(self.song_list)
 
         # Load Songs
-        self.music_dir = "/home/nico-pit/Schreibtisch/Musik-player/Musik"
+        self.music_dir = "path/to/your/music/files"
         self.load_songs(self.music_dir)
 
         # Event Listeners
