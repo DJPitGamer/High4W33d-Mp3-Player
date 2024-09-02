@@ -71,21 +71,27 @@ class MusicPlayer(QWidget):
         self.controls_layout = QHBoxLayout()
 
         self.prev_button = QPushButton("Previous", self)
+        self.prev_button.setStyleSheet("background-color: #2b2b2b; color: white; border: 1px solid #444; padding: 10px;")
         self.controls_layout.addWidget(self.prev_button)
 
         self.play_button = QPushButton("Play", self)
+        self.play_button.setStyleSheet("background-color: #2b2b2b; color: white; border: 1px solid #444; padding: 10px;")
         self.controls_layout.addWidget(self.play_button)
 
         self.next_button = QPushButton("Next", self)
+        self.next_button.setStyleSheet("background-color: #2b2b2b; color: white; border: 1px solid #444; padding: 10px;")
         self.controls_layout.addWidget(self.next_button)
 
         self.shuffle_button = QPushButton("Shuffle", self)
+        self.shuffle_button.setStyleSheet("background-color: #2b2b2b; color: white; border: 1px solid #444; padding: 10px;")
         self.controls_layout.addWidget(self.shuffle_button)
 
         self.repeat_button = QPushButton("Repeat", self)
+        self.repeat_button.setStyleSheet("background-color: #2b2b2b; color: white; border: 1px solid #444; padding: 10px;")
         self.controls_layout.addWidget(self.repeat_button)
 
         self.like_button = QPushButton("Like", self)
+        self.like_button.setStyleSheet("background-color: #2b2b2b; color: white; border: 1px solid #444; padding: 10px;")
         self.controls_layout.addWidget(self.like_button)
 
         self.layout.addLayout(self.controls_layout)
