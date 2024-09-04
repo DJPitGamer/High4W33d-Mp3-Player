@@ -1,9 +1,11 @@
 import os
+from dotenv import load_dotenv
 import random
+import sys
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, 
     QSlider, QListWidget, QSpacerItem, QSizePolicy)
-from PyQt5.QtGui import QPixmap, QPalette, QColor
+from PyQt5.QtGui import QPixmap, QPalette, QColor, QIcon
 from PyQt5.QtCore import Qt, QTimer
 from pygame import mixer
 from mutagen.mp3 import MP3
@@ -11,7 +13,11 @@ from youtube_search import YoutubeSearch
 import requests
 from PIL import Image
 from io import BytesIO
-import sys
+from pypresence import Presence  # Discord RPC
+import time
+
+# Load environment variables from .env file
+load_dotenv()
 
 class MusicPlayer(QWidget):
     def __init__(self):
@@ -21,8 +27,18 @@ class MusicPlayer(QWidget):
         self.setGeometry(0, 0, 1920, 1080)
         self.showMaximized()
 
+        # Set the application icon
+        self.setWindowIcon(QIcon(self.resource_path("cannabis.ico")))
+
         # Set Dark Mode
         self.set_dark_mode()
+
+        # Initialize Discord RPC
+        self.discord_client_id = os.getenv('DISCORD_CLIENT_ID')  # Get Client ID from environment variable
+        if not self.discord_client_id:
+            raise ValueError("DISCORD_CLIENT_ID environment variable not set.")
+        self.rpc = Presence(self.discord_client_id)
+        self.rpc.connect()
 
         # Layouts
         self.layout = QVBoxLayout()
@@ -49,7 +65,7 @@ class MusicPlayer(QWidget):
         self.cover_label = QLabel(self)
         self.cover_label.setFixedSize(600, 600)  # Increase size
         self.cover_label.setAlignment(Qt.AlignCenter)
-        self.cover_label.setPixmap(QPixmap("no_cover.png"))
+        self.cover_label.setPixmap(QPixmap(self.resource_path("no_cover.jpg")))
         self.center_layout.addWidget(self.cover_label)
 
         # Spacer at the bottom to help center the cover
@@ -90,9 +106,10 @@ class MusicPlayer(QWidget):
         self.repeat_button.setStyleSheet("background-color: #2b2b2b; color: white; border: 1px solid #444; padding: 10px;")
         self.controls_layout.addWidget(self.repeat_button)
 
-        self.like_button = QPushButton("Like", self)
-        self.like_button.setStyleSheet("background-color: #2b2b2b; color: white; border: 1px solid #444; padding: 10px;")
-        self.controls_layout.addWidget(self.like_button)
+        # Remove the Like Button
+        # self.like_button = QPushButton("Like", self)
+        # self.like_button.setStyleSheet("background-color: #2b2b2b; color: white; border: 1px solid #444; padding: 10px;")
+        # self.controls_layout.addWidget(self.like_button)
 
         self.layout.addLayout(self.controls_layout)
 
@@ -102,7 +119,7 @@ class MusicPlayer(QWidget):
         self.layout.addWidget(self.song_list)
 
         # Load Songs
-        self.music_dir = "path/to/your/music/files"
+        self.music_dir = self.resource_path("musik")
         self.load_songs(self.music_dir)
 
         # Event Listeners
@@ -111,7 +128,6 @@ class MusicPlayer(QWidget):
         self.prev_button.clicked.connect(self.prev_song)
         self.shuffle_button.clicked.connect(self.shuffle_songs)
         self.repeat_button.clicked.connect(self.toggle_repeat)
-        self.like_button.clicked.connect(self.like_song)
         self.song_list.itemDoubleClicked.connect(self.select_song)
         self.progress_bar.sliderMoved.connect(self.set_position)
 
@@ -141,6 +157,14 @@ class MusicPlayer(QWidget):
         palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
         palette.setColor(QPalette.HighlightedText, Qt.black)
         self.setPalette(palette)
+
+    def resource_path(self, relative_path):
+        """ Get absolute path to resource, works for development and PyInstaller """
+        try:
+            base_path = sys._MEIPASS
+        except AttributeError:
+            base_path = os.path.abspath(".")
+        return os.path.join(base_path, relative_path)
 
     def load_songs(self, music_dir):
         for root, dirs, files in os.walk(music_dir):
@@ -190,6 +214,9 @@ class MusicPlayer(QWidget):
         self.progress_bar.setRange(0, int(audio.info.length))
         self.timer.start(1000)
 
+        # Update Discord RPC
+        self.update_discord_rpc(song_name, artist_name)
+
     def play_song(self, song_path):
         mixer.music.load(song_path)
         mixer.music.play()
@@ -227,10 +254,6 @@ class MusicPlayer(QWidget):
         modes = ["No Repeat", "Repeat One", "Repeat All"]
         self.repeat_button.setText(modes[self.repeat_mode])
         print(f"Repeat Mode: {modes[self.repeat_mode]}")
-
-    def like_song(self):
-        item = self.song_list.item(self.song_index)
-        item.setBackground(Qt.yellow)
 
     def set_position(self, position):
         mixer.music.set_pos(position)
@@ -281,12 +304,23 @@ class MusicPlayer(QWidget):
             response = requests.get(thumbnail_url)
             image = Image.open(BytesIO(response.content))
             # Save high-resolution cover temporarily
-            image.save("temp_cover.jpg", quality=95)
-            pixmap = QPixmap("temp_cover.jpg")
+            temp_cover_path = os.path.join(self.resource_path("temp_cover.jpg"))
+            image.save(temp_cover_path, quality=95)
+            pixmap = QPixmap(temp_cover_path)
             pixmap = pixmap.scaled(self.cover_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
             self.cover_label.setPixmap(pixmap)
         else:
-            self.cover_label.setPixmap(QPixmap("no_cover.png"))
+            self.cover_label.setPixmap(QPixmap(self.resource_path("no_cover.jpg")))
+
+    def update_discord_rpc(self, song_name, artist_name):
+        self.rpc.update(
+            details=f"Listening to {song_name}",
+            state=f"by {artist_name}",
+            large_image="cannabis",  # Use the key of your uploaded icon
+            large_text="High4W33d Music Player",  # Text when hovering over the large image
+            start=time.time()
+        )
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
